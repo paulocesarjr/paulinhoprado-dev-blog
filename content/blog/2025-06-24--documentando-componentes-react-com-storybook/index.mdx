@@ -1,0 +1,302 @@
+---
+title: Documentando componentes React com Storybook
+slug: documentando-componentes-react-com-storybook
+description: Há alguns anos, trabalhei em uma empresa onde tentamos dividir uma única aplicação front-end em partes menores, independentes e isoladas. Bom... não deu muito certo. Talvez por falta de conhecimento ou pelas limitações tecnológicas da época.
+date: 2025-06-24
+lastUpdated: 2025-06-24
+image: /images/documentando-componentes-react-com-storybook/storybook-animated.gif
+tags:
+  - Front-end
+---
+
+Recentemente, aceitei o desafio de integrar um novo time de desenvolvimento aqui na Globo. Dessa vez, deixei um pouco de lado o contexto de streaming e players de vídeo para mergulhar de vez no oceano das TVs. Agora faço parte do time de TV 3.0 e, se você ainda não está familiarizado com esse assunto, não se preocupe: ele, por si só, já renderia um belo artigo.
+
+Um dos pontos mais legais de entrar em um novo time é poder aprender sobre assuntos que, até então, não eram tão familiares. E o melhor de tudo, talvez, é a grande oportunidade de propor melhorias e contribuir com o conhecimento que você já carrega na bagagem.
+
+## Componentes poderosos
+
+O time de TV 3.0 é responsável por criar interatividades para as TVs de sinal aberto. Essas interatividades podem ser pequenos aplicativos de votação, previsão do tempo ou até mesmo um _one-click-buy_, disponíveis na TV pra serem usados via controle remoto. O interessante é que tudo isso é desenvolvido em React, o que combina muito bem com esse tipo de aplicação orientada ao usuário.
+
+Mas há um problema. Nas primeiras semanas no time, percebi que uma das principais dores era a ausência de documentação dos componentes React já criados o que, muitas vezes, resultava em duplicidade de código desnecessária. Estamos falando de um time com mais de dez pessoas; sem uma documentação eficiente, é praticamente inviável ter uma visão completa do que já foi criado ou melhorado por cada desenvolvedor.
+
+Diante dessa boa oportunidade, imediatamente me veio à mente o [Storybook](https://storybook.js.org/). Pense nele como uma documentação e playground 100% orientados a componentes, onde é possível descrever propriedades, comportamentos e até simular interações entre diferentes componentes. Tudo isso é disponibilizado por meio de uma interface amigável, tanto para desenvolvedores quanto para designers (UX).
+
+<img
+  src="/images/documentando-componentes-react-com-storybook/storybook-animated.gif"
+  alt="Interface do Storybook"
+  style={{ margin: "0 auto" }}
+/>
+
+Basicamente, qualquer desenvolvedor que saiba criar um componente React consegue escrever uma _storie_ para o Storybook. Trata-se de um arquivo JavaScript (ou TypeScript) que descreve exatamente o que você deseja documentar sobre o seu componente. Além disso, é possível adicionar diversos _addons_ que expandem significativamente o leque de ferramentas disponíveis como controles, documentação automática, testes de acessibilidade e muito mais.
+
+## Configurando o Storybook
+
+Para demonstrar um pouco do arsenal do Storybook, vamos implementar uma aplicação React que simula uma loja virtual de venda de carros. Teremos alguns componentes básicos que servirão de base para nossa documentação.
+
+Utilizando o Vite, criaremos nossa aplicação React em TypeScript, que chamaremos de `cars-shop-storybook`:
+
+```bash
+npm create vite@latest
+```
+
+Feito isso, podemos criar uma pasta chamada `/components`, onde ficarão todos os componentes que vamos utilizar e, consequentemente, documentar no Storybook. Basicamente, nossa aplicação será composta por três componentes: `Button.tsx`, `CarCard.tsx` e `Photo.tsx`, conforme o código a seguir:
+
+**Button.tsx**
+
+```tsx
+import { IoCart } from "react-icons/io5";
+import "./button.css";
+
+type ButtonProps = {
+  title: string;
+  showIcon?: boolean;
+};
+
+function Button({ title, showIcon = true }: ButtonProps) {
+  return (
+    <button className="button">
+      {showIcon && <IoCart />} {title}
+    </button>
+  );
+}
+
+export default Button;
+```
+
+**Photo.tsx**
+
+```tsx
+import { clsx } from "clsx";
+import "./photo.css";
+
+type PhotoProps = {
+  url: string;
+  isBlackAndWhite?: boolean;
+};
+
+function Photo({ url, isBlackAndWhite = false }: PhotoProps) {
+  const styles = clsx("car-photo", {
+    "car-photo--black-and-white": isBlackAndWhite,
+  });
+
+  return <img className={styles} src={url} alt="Photo" />;
+}
+
+export default Photo;
+```
+
+**CarCard.tsx**
+
+```tsx
+import Button from "../Button/Button";
+import Photo from "../Photo/Photo";
+import "./car-card.css";
+
+type CarProps = {
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  photo: string;
+};
+
+function CarCard({ model, make, year, price, photo }: CarProps) {
+  return (
+    <div className="car-card">
+      <h3>{model}</h3>
+      <Photo url={photo} />
+      <ul className="car-details">
+        <li>{make}</li>
+        <li>{year}</li>
+        <li>{price}</li>
+      </ul>
+      <Button title="Comprar" />
+    </div>
+  );
+}
+
+export default CarCard;
+```
+
+Por fim, o componente principal, `App.tsx`, será responsável por renderizar uma listagem de carros utilizando o componente `CarCard.tsx`:
+
+**App.tsx**
+
+```tsx
+import "./App.css";
+import type { Car } from "./types/Car";
+import { cars } from "./data/cars";
+import CarCard from "./components/CarCard/CarCard";
+
+function App() {
+  return (
+    <>
+      {cars.map((car: Car) => (
+        <CarCard
+          key={car.id}
+          make={car.make}
+          model={car.model}
+          year={car.year}
+          price={car.price}
+          photo={car.photo}
+        />
+      ))}
+    </>
+  );
+}
+
+export default App;
+```
+
+Sua aplicação deve exibir algo semelhante a isto aqui:
+
+<img
+  src="/images/documentando-componentes-react-com-storybook/loja-de-carros.png"
+  alt="Aplicação de loja de carros"
+  style={{ margin: "0 auto" }}
+/>
+
+Uma vez definida nossa aplicação de teste, podemos focar na instalação do Storybook. Como nosso projeto utiliza o Vite, existe uma seção na própria documentação do Storybook com as orientações para o setup: [Vite + Storybook] (https://storybook.js.org/docs/get-started/frameworks/react-vite).
+
+Vamos criar o Storybook na raiz do projeto principal:
+
+```bash
+npm create storybook@latest
+```
+
+Após seguir as instruções do CLI, uma pasta `/.storybook` será criada. Nela ficarão todas as configurações referentes à sua documentação, inclusive com a possibilidade de criar páginas `.mdx` personalizadas para descrever todos os detalhes do seu projeto.
+
+Para o nosso exemplo, podemos apagar todos os arquivos criados e manter apenas os três principais arquivos de configuração:
+
+```bash
+/.storybook/
+ |___main.ts
+ |___preview.ts
+ |___vitest.setup.ts
+```
+
+## Documentar pode ser divertido
+
+Geralmente, quando pensamos em documentação na programação, a maioria dos desenvolvedores torce o nariz. Com o Storybook, a dinâmica é um pouco diferente. Cada componente da sua aplicação pode conter um arquivo .stories.ts, que funcionará como um mapa para quem for utilizar esse componente. Nele, é importante que sejam descritas todas as variações possíveis e os casos de uso conhecidos desse componente.
+
+Vamos pegar o componente `Button.tsx` como exemplo. Dentro da sua pasta, vamos criar um arquivo `Button.stories.ts` que será lido pelo Storybook de acordo com as nossas orientações:
+
+```ts
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import Button from "./Button";
+
+const meta = {
+  component: Button,
+} satisfies Meta<typeof Button>;
+
+type Story = StoryObj<typeof meta>;
+
+export const NoIcon: Story = {
+  args: {
+    title: "Button Without Icon",
+    showIcon: false,
+  },
+};
+
+export const WithIcon: Story = {
+  args: {
+    title: "Button With Icon",
+    showIcon: true,
+  },
+};
+
+export default meta;
+```
+
+Analisando o arquivo acima, podemos perceber que o objeto meta é exportado juntamente com `NoIcon` e `WithIcon`, que representam duas variações possíveis para esse componente de botão: uma sem ícone e outra com ícone.
+
+Dentro da propriedade args, passamos as props responsáveis pela renderização do nosso componente. Em resumo, é como se criássemos duas instâncias do componente, que ficarão visíveis na documentação.
+
+Agora na raiz do nosso projeto já podemos rodar o comando:
+
+**Photo.stories.ts**
+
+```bash
+yarn storybook
+```
+
+E nossa documentação será aberta no browser:
+
+<img
+  src="/images/documentando-componentes-react-com-storybook/button-stories.png"
+  alt="Stories do componente Button"
+  style={{ margin: "0 auto" }}
+/>
+
+Note que, na área inferior, são listadas todas as propriedades do componente `Button.tsx`, e elas podem ser alteradas dinamicamente pela própria interface da página.
+
+Podemos fazer o mesmo para os componentes `Photo.tsx` e `CarCard.tsx` e criar suas stories.
+
+```ts
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import Photo from "./Photo";
+
+const meta = {
+  component: Photo,
+} satisfies Meta<typeof Photo>;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {
+  args: {
+    url: "https://image1.mobiauto.com.br/images/api/images/v1.0/12433679/transform/fl_progressive,f_webp,q_80",
+    isBlackAndWhite: false,
+  },
+};
+
+export const BlackAndWhite: Story = {
+  args: {
+    url: "https://image1.mobiauto.com.br/images/api/images/v1.0/12433679/transform/fl_progressive,f_webp,q_80",
+    isBlackAndWhite: true,
+  },
+};
+
+export default meta;
+```
+
+**CarCard.stories.ts**
+
+```ts
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import CarCard from "./CarCard";
+
+const meta = {
+  component: CarCard,
+} satisfies Meta<typeof CarCard>;
+
+type Story = StoryObj<typeof meta>;
+
+export const Primary: Story = {
+  args: {
+    make: "Toyota",
+    model: "Corolla",
+    year: 2020,
+    price: 20000,
+    photo:
+      "https://image1.mobiauto.com.br/images/api/images/v1.0/12433679/transform/fl_progressive,f_webp,q_80",
+  },
+};
+
+export default meta;
+```
+
+Nosso Storybook vai responder a todas as stories criadas para os componentes React:
+
+<img
+  src="/images/documentando-componentes-react-com-storybook/storybook.png"
+  alt="Storybook com os componentes documentados"
+  style={{ margin: "0 auto" }}
+/>
+
+## Boas práticas
+
+Eu diria que o primeiro grande passo para a criação de um bom Storybook é o alinhamento com o time de UX. Cada _story_ deve representar o componente de forma isolada e contemplar seus principais casos de uso: habilitado, desabilitado, com ícone, sem ícone etc. As variações podem ser infinitas, por isso, ter um escopo bem definido em mente é fundamental.
+
+Por fim, aproveitar o acervo de addons do Storybook é uma escolha certeira. As funcionalidades vão desde a adição de testes unitários para os componentes até tabelas de compatibilidade entre navegadores, no estilo do Can I Use do MDN. Você pode conferir os diversos plugins disponíveis em: [Addons](https://storybook.js.org/addons)
+
+Ah! E não se esqueça de conferir o repositório com o projeto completo deste artigo: [cars-shop-storybook](https://github.com/paulocesarjr/cars-shop-storybook).

@@ -1,0 +1,179 @@
+---
+title: Usando Strategy Pattern para evitar condicionamento exagerado
+slug: usando-strategy-pattern-para-evitar-condicionamento-exagerado
+description: Há algumas semanas, trabalhei em soluções para o Player da Globo, onde era necessário ativar e desativar comportamentos específicos no software durante a execução. Esse tipo de necessidade é comumente resolvido com condicionais encadeadas, como if-else e switch, mas essa abordagem nem sempre é a ideal.
+date: 2025-01-11
+lastUpdated: 2025-01-11
+image: /images/usando-strategy-pattern-para-evitar-condicionamento-exagerado/sapinho_perdido.gif
+tags:
+  - Algoritmos
+---
+
+Há algumas semanas, trabalhei em soluções para o Player da Globo, onde era necessário ativar e desativar comportamentos específicos no software durante a execução. Esse tipo de necessidade é comumente resolvido com condicionais encadeadas, como `if-else` e `switch`, mas essa abordagem nem sempre é a ideal.
+
+Neste artigo, apresento uma solução que atendeu perfeitamente a esse desafio e que pode ser aplicada a diversos cenários na programação.
+
+## Qual estratégia devo usar?
+
+Imagine que você acabou de chegar a um destino desconhecido. Ao sair do aeroporto, você tem algumas opções para se locomover até o hotel. A alternativa mais econômica é alugar uma bicicleta, mas isso levaria mais tempo. Pegar um ônibus seria um pouco mais caro, mas te levaria com mais agilidade e segurança. Por fim, alugar um carro seria a opção mais rápida, mas também a mais cara.
+
+<img
+  src="/images/usando-strategy-pattern-para-evitar-condicionamento-exagerado/sapinho_perdido.gif"
+  alt="Sapinho perdido com mapa"
+  style={{ maxWidth: "100%", height: "auto", margin: "0 auto" }}
+/>
+
+O ponto mais importante nessa situação é entender que, independentemente da estratégia escolhida, o objetivo final é o mesmo: chegar ao hotel.
+
+Essa analogia pode ser aplicada ao desenvolvimento de software. Quando lidamos com cenários onde diferentes processos buscam alcançar o mesmo objetivo, podemos utilizar o padrão de projeto Strategy (Strategy Design Pattern) para nos ajudar.
+
+## Quando se programa sem estratégia...
+
+Imagine que precisamos desenvolver um sistema bancário capaz de calcular taxas com base no tipo de conta do cliente, como **corrente**, **poupança** ou **premium**. Esses cálculos precisam ser realizados em tempo de execução, o que exige uma implementação que direcione corretamente o fluxo do código para o cálculo apropriado.
+
+A princípio, uma abordagem comum seria usar uma estrutura simples de condicionais encadeadas para resolver o problema de forma rápida e funcional:
+
+```javascript
+class Banco {
+  calcularTaxa(tipoConta, valor) {
+    if (tipoConta === "corrente") {
+      return valor * 0.02; // 2% de taxa
+    } else if (tipoConta === "poupanca") {
+      return valor * 0.01; // 1% de taxa
+    } else if (tipoConta === "premium") {
+      return valor * 0.005; // 0,5% de taxa
+    } else {
+      throw new Error("Tipo de conta não suportado.");
+    }
+  }
+}
+
+const banco = new Banco();
+const taxa = banco.calcularTaxa("corrente", 1000); // Exemplo: R$1000
+console.log(`A taxa para sua conta é: R$${taxa}`);
+```
+
+Embora essa solução funcione bem para cenários simples, o que acontece se o banco precisar adicionar mais cinco tipos de conta no futuro?
+
+```javascript
+calcularTaxa(tipoConta, valor) {
+  if (tipoConta === "corrente") {
+    return valor * 0.02; // 2% de taxa
+  } else if (tipoConta === "poupanca") {
+    return valor * 0.01; // 1% de taxa
+  } else if (tipoConta === "premium") {
+    return valor * 0.005; // 0,5% de taxa
+  } else if (tipoConta === "estudante") {
+    return valor * 0.001; // 0,1% de taxa
+  } else if (tipoConta === "empresarial") {
+    return valor * 0.03; // 3% de taxa
+  } else if (tipoConta === "internacional") {
+    return valor * 0.04 + 10; // 4% + taxa fixa de R$10
+  } else if (tipoConta === "digital") {
+    return valor * 0.008; // 0,8% de taxa
+  } else if (tipoConta === "exclusiva") {
+    return valor * 0.002; // 0,2% de taxa
+  } else {
+    throw new Error("Tipo de conta inválido!");
+  }
+}
+```
+
+Agora, o código começa a mostrar sérias limitações. Vamos explorar os problemas dessa abordagem:
+
+**1. Baixa escalabilidade**
+
+Toda vez que um novo tipo de conta precisa ser adicionado, o método calcularTaxa precisa ser modificado. Isso aumenta continuamente o número de condicionais, tornando o código mais complexo e difícil de gerenciar.
+
+**2. Alta dependência**
+
+A lógica de cálculo das taxas está completamente acoplada ao método calcularTaxa. Alterações em um tipo de conta podem impactar outros inadvertidamente, elevando o risco de introduzir bugs.
+
+**3. Repetição de código**
+
+Trechos similares, como `valor * taxa`, são duplicados para cada tipo de conta. Isso reduz a reutilização de código e viola o princípio **DRY** (_Don't Repeat Yourself_).
+
+No próximo passo, veremos como o Strategy Pattern pode resolver esses problemas, promovendo um código mais limpo, escalável e modular.
+
+## Uma estratégia de cada vez!
+
+Para evitar os problemas mencionados anteriormente, vamos tratar cada tipo de conta como uma entidade isolada no software. Isso ocorre porque cada tipo de conta possui um cálculo específico de taxa e pode ter outros futuros comportamentos associados.
+
+Em vez de criar uma classe `Banco` com um método `calcularTaxa` que resolva todas as operações, vamos criar uma classe para cada tipo de conta:
+
+```javascript
+class ContaCorrente {
+  calcularTaxa(valor) {
+    return valor * 0.02; // 2% de taxa
+  }
+}
+
+class ContaPoupanca {
+  calcularTaxa(valor) {
+    return valor * 0.01; // 1% de taxa
+  }
+}
+
+class ContaPremium {
+  calcularTaxa(valor) {
+    return valor * 0.005; // 0,5% de taxa
+  }
+}
+```
+
+Isso garante que cada operação de cálculo seja mantida dentro de um escopo específico para o seu tipo de conta. Agora, temos comportamentos isolados e focados em cada tipo de conta:
+
+<img
+  src="/images/usando-strategy-pattern-para-evitar-condicionamento-exagerado/uml_banco_strategy.png"
+  alt="Diagrama UML"
+  style={{ maxWidth: "100%", height: "auto", margin: "0 auto" }}
+/>
+
+Mas, onde ficará a seleção da conta desejada?
+
+```javascript
+class Banco {
+  constructor(conta) {
+    this.conta = conta;
+  }
+
+  setConta(conta) {
+    this.conta = conta;
+  }
+
+  calcularTaxa(valor) {
+    if (!this.conta) {
+      throw new Error("Nenhuma conta definida.");
+    }
+    return this.conta.calcularTaxa(valor);
+  }
+}
+```
+
+Observe que, em vez de criarmos estruturas de decisão encadeadas `(if-else)`, optamos por passar uma `conta`, estratégia no construtor da nossa classe `Banco`. Isso permite que, ao instanciar o banco, o método `setConta` selecione o tipo de conta desejado em tempo de execução. O cálculo da taxa será executado por meio de `this.conta.calcularTaxa(valor)`.
+
+```javascript
+const banco = new Banco(new ContaCorrente());
+console.log(`Taxa para conta corrente: R$${banco.calcularTaxa(1000)}`); // R$20
+
+banco.setConta(new ContaPoupanca());
+console.log(`Taxa para conta poupança: R$${banco.calcularTaxa(1000)}`); // R$10
+
+banco.setConta(new ContaPremium());
+console.log(`Taxa para conta premium: R$${banco.calcularTaxa(1000)}`); // R$5
+```
+
+Com esse modelo, conseguimos aplicar o Strategy Pattern de forma simples, garantindo uma implementação mais flexível, escalável e com baixo acoplamento.
+
+## Posso usar estratégia em tudo?
+
+O Strategy Pattern é uma solução poderosa quando se precisa variar o comportamento de uma operação em tempo de execução, sem acoplar diretamente o código de execução a diferentes condições ou tipos. Esse padrão é ideal para cenários onde o comportamento de uma operação pode variar conforme o contexto e onde as alternativas são independentes entre si.
+
+### Quando usar o Strategy Pattern
+
+- **Comportamentos variantes**: Quando o comportamento de um sistema precisa ser alterado dinamicamente, dependendo de condições específicas (como diferentes tipos de conta no exemplo bancário).
+- **Evitar condicionais complexas**: Quando a lógica de decisão é baseada em muitas estruturas de controle de fluxo, como múltiplos `if-else` ou `switch`, o que torna o código difícil de manter.
+- **Facilidade de manutenção e expansão**: Quando você deseja adicionar novos comportamentos sem modificar o código existente, simplesmente criando novas classes de estratégia.
+- **Desacoplamento de comportamentos**: Quando você quer isolar comportamentos específicos em diferentes classes, tornando o código mais modular e flexível.
+
+Ao utilizar o Strategy, garantimos que o código se torne mais limpo, modular e flexível, além de promover uma melhor manutenção e expansão do sistema.

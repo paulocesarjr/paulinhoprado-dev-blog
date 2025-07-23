@@ -1,0 +1,344 @@
+---
+title: Criando aplicações em tempo real com SSE (Server-Sent Events)
+slug: criando-aplicacoes-em-tempo-real-com-sse
+description: Há cerca de uma década, se precisássemos desenvolver uma aplicação em tempo real, como um chat ou um feed de atualizações, a primeira solução que viria à mente seria o uso de polling. Essa técnica consiste em enviar requisições HTTP de forma temporizada e recorrente ao servidor, buscando dados atualizados.
+date: 2025-01-27
+lastUpdated: 2025-01-27
+image: /images/criando-aplicacoes-em-tempo-real-com-sse/chat.gif
+tags:
+  - Front-end
+---
+
+Há cerca de uma década, se precisássemos desenvolver uma aplicação em tempo real, como um chat ou um feed de atualizações, a primeira solução que viria à mente seria o uso de polling. Essa técnica consiste em enviar requisições HTTP de forma temporizada e recorrente ao servidor, buscando dados atualizados. No entanto, mesmo quando não há novas informações disponíveis, essas requisições continuam sendo disparadas, resultando em desperdício de recursos, como largura de banda e processamento do servidor.
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/chat.gif"
+  alt="Mensagens"
+  style={{ margin: "0 auto" }}
+/>
+
+Felizmente, os tempos mudaram. Hoje, ao trabalharmos com JavaScript, contamos com a biblioteca [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource), que permite estabelecer uma conexão SSE (_Server-Sent Events_). Neste artigo, explorarei os conceitos por trás desse recurso e apresentarei um breve tutorial para aplicar esses conceitos na prática.
+
+## Uma conexão sempre aberta
+
+Diferentemente das requisições HTTP convencionais, onde o cliente dispara uma requisição e o servidor devolve uma resposta, as conexões SSE permanecem sempre abertas. Isso possibilita uma comunicação unidirecional entre servidor e cliente. Ao contrário dos WebSockets, que permitem comunicação bidirecional, no SSE apenas o servidor envia dados ao cliente, que os recebe de forma instantânea enquanto está conectado.
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/http.png"
+  alt="Diagrama de uma arquitetura HTTP cliente servidor"
+  style={{ margin: "0 auto" }}
+/>
+
+Uma vez estabelecida a conexão, os dados chegam ao cliente JavaScript na forma de eventos, eliminando a necessidade de disparar novas requisições ao servidor para buscar atualizações, como acontece no polling. Cabe ao servidor a responsabilidade de enviar eventos com os dados atualizados sempre que necessário.
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/sse.png"
+  alt="Diagrama de uma arquitetura de uma conexão SSE"
+  style={{ margin: "0 auto" }}
+/>
+
+A menos que a conexão seja encerrada, o cliente fica constantemente aguardando novos eventos de dados do servidor, tornando essa técnica ideal para a construção de notificações, dashboards ou chats que necessitam de atualizações constantes.
+
+## Sistema de controle de conexões
+
+Para demonstrar na prática os conceitos abordados, vamos criar uma aplicação em Node.js (back-end) responsável por disponibilizar um endpoint de conexão SSE, que será utilizado por um cliente JavaScript (front-end).
+
+> Nossa aplicação consiste em um sistema onde o usuário deve informar um UserID e estabelecer uma conexão SSE. A partir disso, o servidor começa a disparar, a cada 5 segundos, um evento que retorna a lista de usuários conectados. Caso o usuário encerre sua conexão, ele é removido automaticamente da lista de usuários conectados.
+
+Vamos começar!
+
+```
+npm init -y
+
+npm i express
+```
+
+Ao criar o arquivo `index.js`, vamos centralizar a lógica do nosso back-end. Além disso vamos criar um pasta `/public` onde ficarão o `index.html` e arquivo `script.js` para gerenciar nossa página. A estrutura deve ficar assim:
+
+```
+/public
+  index.html
+  script.js
+index.js
+package.json
+```
+
+Em `index.js`, vamos importar a biblioteca `express`, que é responsável por permitir a criação de endpoints HTTP:
+
+```javascript
+import express from "express";
+
+const app = express();
+app.use(express.json());
+
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server is running on ${PORT} port`));
+```
+
+Além disso, é necessário configurar para que o conteúdo da pasta `/public` seja retornado quando o usuário acessar `http://localhost:3000/`:
+
+```javascript
+import express from "express";
+import fs from "fs";
+import path from "path";
+
+const app = express();
+app.use(express.json());
+app.use(express.static(path.join(path.resolve(path.dirname("")), "public")));
+
+app.get("/", (_, res) => {
+  res.writeHead(200, { "content-language": "text/html" });
+  const streamIndexHtml = fs.createReadStream("index.html");
+  streamIndexHtml.pipe(res);
+});
+
+const PORT = 3000;
+app.listen(PORT, () => console.log(`Server is running on ${PORT} port`));
+```
+
+Dentro de `/public` em `index.html` vamos montar um HTML básico para retornar um título e testar o funcionando do servidor:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Server Sent Events Demo</title>
+  </head>
+  <body>
+    <h1>Server Sent Events Demo (SSE)</h1>
+  </body>
+</html>
+```
+
+Agora, ao rodar o comando `npm start` no terminal, a página já deve ser exibida no navegador:
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/tutorial-01.png"
+  alt="Tutorial 01"
+  style={{ margin: "0 auto" }}
+/>
+
+Voltando as atenções para o back-end, podemos criar arquivo `connection.js`, responsável por gerenciar as conexões do usuários ao servidor:
+
+```
+/public
+  index.html
+  script.js
+index.js
+connection.js
+package.json
+```
+
+Dentro dele, vamos exportar uma classe `Connection`, onde será armazenado um mapa de usuários conectados, além dos métodos `registerUser`, para registrar novos usuários, e `removeUser`, para removê-los do mapa:
+
+```javascript
+export default class Connection {
+  _users = new Map();
+
+  registerUser() {}
+
+  removeUser() {}
+}
+```
+
+Também podemos criar um getter `connectedUsers` para facilitar o acesso aos usuários conectados fora da classe:
+
+```javascript
+export default class Connection {
+  _users = new Map();
+
+  get connectedUsers() {
+    return [...this._users.keys()];
+  }
+
+  registerUser() {}
+
+  removeUser() {}
+}
+```
+
+No método registerUser, vamos receber o `userId` do usuário conectado e gerar um `connectionId`, que servirá como identificador único para essa conexão estabelecida:
+
+```javascript
+registerUser(userId, response) {
+  if (!this._users.has(userId)) {
+    this._users.set(userId, [])
+  }
+
+  const connectionId = this.generateConnectionId()
+  this._users.get(userId).push({ connectionId, response })
+  return connectionId
+}
+```
+
+No método `generateConnectionId`, podemos utilizar a biblioteca `crypto` para gerar e retornar um token aleatório:
+
+```javascript
+generateConnectionId() {
+  return crypto.randomBytes(20).toString("hex")
+}
+```
+
+Já o método `removeUser` receberá o `userId` e o `connectionId` do usuário que fechou a conexão, e, com isso, removerá o usuário do mapa:
+
+```javascript
+removeUser(userId, connectionId) {
+  if (!this._users.has(userId)) {
+    return
+  }
+
+  const connections = this._users
+    .get(userId)
+    .filter((connection) => connection.connectionId !== connectionId)
+
+  if (connections.length) {
+    this._users.set(userId, connections)
+  } else {
+    this._users.delete(userId)
+  }
+}
+```
+
+Como a classe `Connection` isola a lógica de gerenciamento das conexões, precisamos configurar um endpoint em nosso servidor (`index.js`) para que os clientes possam iniciar uma comunicação SSE. Essas conexões, por sua vez, serão gerenciadas pela classe `Connection`:
+
+```javascript
+const connection = new Connection();
+
+app.get("/events", (req, res) => {
+  res
+    .writeHead(200, {
+      "Cache-Control": "no-cache",
+      "Content-Type": "text/event-stream",
+      Connection: "keep-alive",
+    })
+    .write("\n");
+
+  const EVENTS_INTERVAL = 5000;
+  const userId = req.query.user;
+  const connectionId = connection.registerUser(userId, res);
+
+  setInterval(() => {
+    res.write(`data: ${JSON.stringify(connection.connectedUsers)}\n\n`);
+  }, EVENTS_INTERVAL);
+
+  req.on("close", () => connection.removeUser(userId, connectionId));
+});
+```
+
+Aqui podemos destacar três pontos importantes:
+
+1. O endpoint `/events` deve responder ao cliente com o cabeçalho `Content-Type: text/event-stream`. Isso permite que os clientes reconheçam a comunicação SSE e criem um objeto `EventSource` para estabelecer a conexão.
+
+2. A cada cinco segundos, o servidor enviará uma resposta em forma de evento para os clientes conectados, informando quais usuários estabeleceram conexão.
+
+3. Conexões encerradas podem ser monitoradas utilizando o evento `req.on("close", () => {})`, permitindo que usuários desconectados sejam removidos do mapa de conexões.
+
+Nosso back-end está pronto! Agora podemos voltar nossa atenção para o front-end.
+
+Como o servidor já disponibiliza um endpoint para conexões SSE, cabe ao cliente requisitar esse endereço e aguardar o recebimento dos eventos enviados.
+
+No arquivo `index.html`, vamos criar:
+
+- Um campo de texto para o usuário informar seu UserID;
+- Dois botões: um para iniciar e outro para encerrar a conexão SSE;
+- Uma tag `<ul>` para exibir a lista de usuários conectados, que será atualizada com os eventos enviados pelo servidor.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Sent Events Demo</title>
+  </head>
+  <body>
+    <h1>Server Sent Events Demo (SSE)</h1>
+
+    <input type="text" id="userIdTxt" placeholder="User ID" />
+    <input type="button" id="connectBtn" value="Connect" />
+    <input type="button" id="closeBtn" value="Close" disabled />
+    <ul id="users"></ul>
+    <script type="text/javascript" src="script.js"></script>
+  </body>
+</html>
+```
+
+Por fim, no arquivo `script.js` para isolar a lógica de manipulação dos componentes e a criação do objeto `EventSource`.
+
+```javascript
+let eventSource = null;
+const userIdInput = document.querySelector("#userIdTxt");
+const connectButton = document.querySelector("#connectBtn");
+const closeButton = document.querySelector("#closeBtn");
+const ulUsers = document.querySelector("#users");
+
+connectButton.addEventListener("click", startConnection);
+closeButton.addEventListener("click", closeConnection);
+
+function startConnection() {
+  const userId = userIdInput.value.trim();
+  if (!userId) {
+    alert("Please enter a User ID");
+    return;
+  }
+
+  eventSource = new EventSource(`/events?user=${userId}`);
+  connectButton.setAttribute("disabled", "");
+  closeButton.removeAttribute("disabled");
+  userIdInput.setAttribute("disabled", "");
+
+  eventSource.onmessage = (event) => {
+    const connectedUsers = JSON.parse(event.data);
+    updateUsersList(connectedUsers);
+  };
+}
+
+function updateUsersList(users) {
+  ulUsers.innerHTML = "";
+
+  users.forEach((user) => {
+    const liUser = document.createElement("li");
+    liUser.textContent = user;
+    ulUsers.appendChild(liUser);
+  });
+}
+
+function closeConnection() {
+  eventSource.close();
+
+  ulUsers.innerHTML = "";
+  connectButton.removeAttribute("disabled");
+  userIdInput.removeAttribute("disabled");
+  closeButton.setAttribute("disabled", "");
+}
+```
+
+Aqui, destacamos a criação do objeto `eventSource`:
+`` eventSource = new EventSource(`/events?user=${userId}`) ``.
+
+No construtor, ele espera como argumento um servidor que responda com o conteúdo `text/event-stream`. Por sorte, já configuramos exatamente isso! 😜
+
+A função `eventSource.onmessage(event => {})` permite receber em tempo real todos os eventos enviados pelo servidor de forma unidirecional.
+
+Para evitar que a conexão permaneça aberta indefinidamente, podemos utilizar `eventSource.close()`, que fecha o canal de comunicação com o servidor. Alternativamente, a conexão também será encerrada ao fechar o navegador.
+
+## A magia do tempo real
+
+Ao abrir duas abas da nossa aplicação no navegador, podemos validar o funcionamento da conexão em tempo real, observando as atualizações de usuários conectados em ação.
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/sse-application.gif"
+  alt="SSE Application"
+  style={{ margin: "0 auto" }}
+/>
+
+Note que, enquanto a conexão SSE permanecer aberta, os eventos continuarão sendo recebidos a cada 5 segundos, atualizando automaticamente a lista de usuários conectados ao servidor.
+
+<img
+  src="/images/criando-aplicacoes-em-tempo-real-com-sse/network.png"
+  alt="Aba Network do Browser"
+  style={{ margin: "0 auto" }}
+/>
+
+Com isso, concluímos a implementação de um sistema simples utilizando SSE para conexões em tempo real. Essa técnica é ideal para casos em que o servidor precisa enviar dados contínuos e unidirecionais para o cliente, como feeds, chats ou dashboards. Se você quiser conferir o código completo deste projeto, acesse meu repositório no GitHub: [Server Sent Events](https://github.com/paulocesarjr/server-sent-events).

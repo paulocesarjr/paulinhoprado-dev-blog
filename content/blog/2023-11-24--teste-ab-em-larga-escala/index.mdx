@@ -1,0 +1,105 @@
+---
+title: Teste A/B em larga escala. Como testar uma aplicação com 1 milhão de usuários?
+slug: teste-ab-em-larga-escala
+description: Antes de entrar na Globo como Engenheiro de Software, eu sempre imaginava que o Teste A/B era coisa de Designer. Talvez pelo fato de ter iniciado minha carreira como Web Designer e ter lido em algum lugar que essa técnica era muito difundida entre os estudiosos de UI & UX. Bem... Eu estava errado.
+date: 2023-11-24
+lastUpdated: 2023-11-24
+image: https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xv9jegi7ewyt4bzyu4ip.gif
+tags:
+  - Testes
+---
+
+Antes de entrar na Globo como Engenheiro de Software, eu sempre imaginava que o Teste A/B era coisa de Designer. Talvez pelo fato de ter iniciado minha carreira como Web Designer e ter lido em algum lugar que essa técnica era muito difundida entre os estudiosos de UI & UX. Bem... Eu estava errado. Não em dizer que um designer não possa realizar um Teste A/B, mas deixar de vincular essa técnica ao mundo dos softwares me parece um desperdício.
+
+## O que é um Teste A/B?
+
+Imagine o seguinte cenário: Uma loja virtual de roupas deseja criar um tutorial (passo a passo guiado) para auxiliar seus usuários no processo de compras. O time de desenvolvimento, empolgado com a nova feature, partiu logo para a codificação. O mais otimista dos devs exclamou: "Isso vai aumentar muito o número de vendas!". Entretanto, o mais pessimista retrucou com um questionamento: "Prove-me!"
+
+<img 
+    src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/xv9jegi7ewyt4bzyu4ip.gif" 
+    alt="Janela de tutorial no Windows" 
+    style={{ maxWidth: '50%', height: 'auto', margin: "0 auto" }}/>
+
+Sentindo-se desafiado, o mais otimista decidiu fazer uma comparação após o tutorial ter sido implementado:
+
+| Sem tutorial        |    Com tutorial     |
+| ------------------- | :-----------------: |
+| 1.300 vendas no mês | 1.930 vendas no mês |
+
+E para o bem de seu ego, ele estava certo. As vendas aumentaram em **48%** após a adição do tutorial na página. O mais interessante é que o dev otimista tinha a ciência ao seu lado. O que ele implementou foi um Teste A/B.
+
+> Um teste A/B é uma maneira de comparar duas versões de um produto e medir qual entrega a **MELHOR HIPÓTESE**.
+
+Existem 3 componentes chave que compõe um Teste A/B:
+
+- Hipótese
+- Grupo de controle
+- Significância
+
+A **Hipótese** trata-se de uma ideia a ser validada. Pode estar relacionada a uma nova funcionalidade, atualização de dependência ou até correção de um problema. O que é imprescindível é que ela não seja única. Um Teste A/B deve ter pelo menos duas hipóteses a serem comparadas, com o objetivo de que pelo menos uma alcance a significância.
+
+Mas o que é ser significante? Pode-se dizer que é aquilo que trouxe informação, positiva ou negativamente. Nem todo Teste A/B traz ações imediatas; muitas vezes, a **Significância** acaba mostrando que você não deve implementar algo no seu produto.
+
+E quem participa do A/B? O **Grupo de controle.** Todos os usuários que testarem alguma das hipóteses fazem parte do grupo de controle, que, em linhas gerais, são os participantes do Teste A/B.
+
+## Como criar um Teste A/B?
+
+Não existe um consenso sobre quais são as etapas para construir um Teste A/B, muito menos sobre qual ferramenta utilizar. No entanto, procurei separar as 5 etapas que considero indispensáveis em todo experimento:
+
+1. Criar as hipóteses
+2. Disponibilizar essas hipóteses a um grupo pequeno de usuários
+3. Definir as métricas que serão mensuradas
+4. Ajustar o grupo de controle
+   Comparar a significância
+
+Criar as hipóteses está diretamente relacionado à origem do produto a ser testado. Muitas vezes, comparamos uma funcionalidade já em produção (H0) com uma mudança (H1), com o objetivo de descobrir qual é a mais eficiente, como uma página de venda sem tutorial e com tutorial, por exemplo.
+
+Uma vez criadas, você deve entregar essa hipótese modificada a um grupo pequeno de usuários, como 5% ou 10% dos usuários. Imagine se essa alteração causar um efeito colateral ou bug no seu sistema? Afinal, os testes servem para isso.
+
+É fundamental que você defina quais são as métricas responsáveis por comparar a significância entre as hipóteses. E mais importante é que você tenha fácil acesso a essas métricas. Na história da loja de roupas, temos o número de vendas como norte de comparação.
+
+Hora ou outra, você precisará ajustar a entrega do seu experimento ao grupo de controle. Não quero dar spoilers, mas um 6º componente chave surgirá em breve.
+
+Por fim, quando seu experimento tiver dados relevantes, é hora de comparar a significância e avaliar as hipóteses.
+
+## A influência do tempo
+
+"Para agora o que você está fazendo e pegue uma moeda. Jogue-a 3 vezes para cima e diga qual face caiu mais vezes. Coroa 3 vezes? Cara 2 vezes?
+
+<img 
+    src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/bs6lw8zbmk4lmf3p1qh8.gif" 
+    alt="Marty McFly e Doc Brown espantandos!" 
+    style={{ maxWidth: '50%', height: 'auto', margin: "0 auto" }}/>
+
+Se você fizesse um Teste A/B nessa moeda, concluiria que todas as vezes que ela cai sempre será Coroa? Ou Cara? E se você jogar a moeda 10.000 vezes? Ficará surpreso em saber que a quantidade será quase equivalente.
+
+Esse é um dos erros comuns do Teste A/B: ignorar o tempo. O tempo é o responsável por influenciar suas hipóteses, de maneira que as torne convergentes ou divergentes.
+
+Durante o tempo em que seu A/B estiver disponível, novas hipóteses poderão surgir e, inclusive, métricas que antes estavam escondidas podem tornar-se relevantes.
+
+**E quanto tempo meu A/B deve ficar no ar?** Até você atingir uma significância confiável.
+
+## Como testar uma aplicação com 1 milhão de usuários?
+
+Trabalho no time de Player de Vídeos da Globo. Meu time é responsável por desenvolver o Player que atende a produtos que vão desde sites de notícias até uma plataforma gigante de streaming, como Globoplay, G1 e Globo Esporte, todos utilizando um Player feito em JavaScript baseado no [Clappr](https://github.com/clappr), um projeto open-source que permite criar players de vídeo de forma extensível numa arquitetura baseada em plugins. Fique à vontade para colaborar!
+
+<img 
+    src="https://dev-to-uploads.s3.amazonaws.com/uploads/articles/fhs64er056bf1dncqcig.gif" 
+    alt="William Bonner dizendo: Vamos respirar..." 
+    style={{ maxWidth: '50%', height: 'auto', margin: "0 auto" }}/>
+
+Atualmente, o Player da Globo possui cerca de 10 bilhões de plays ao ano e uma média de 4 bilhões de horas assistidas, tudo isso em um pequeno e poderoso Player em JavaScript.
+
+Surge então o questionamento: como testar uma aplicação de 1 milhão de usuários? Simples, passando aos usuários a responsabilidade de testar! A mágica do Teste A/B está nisso, testar cenários reais com usuários reais. No Player, criamos Testes A/B para diversos cenários, como mudanças de interface, atualizações de dependência e até configurações de reprodução de vídeo. O Teste A/B nos garante tomar decisões baseadas em dados e não apenas no instinto.
+
+Para implementar os testes, utilizamos uma solução interna desenvolvida pelo time de Backstage da Globo. Ela é responsável por versionar o Player e garantir que os usuários recebam hipóteses compatíveis do experimento. Existem algumas ferramentas famosas no mercado para implementar A/B, como o [Split Hero](https://splithero.com/) e o próprio [Firebase](https://firebase.google.com/docs/ab-testing).
+
+Recentemente, o Player aumentou a entrega de propagandas (advertising) em mais de 1.47% graças à exibição de Ads após o replay dos vídeos. Tal implementação só foi possível de ser confirmada graças à comprovação estatística proporcionada por um experimento A/B, onde comparamos uma versão do Player sem Ads após o replay e uma com ads. O aumento foi de 0.98% de impressões nos Ads. Falando de uma aplicação que tem bilhões de plays, trouxe retorno monetário relevante.
+
+## Por que fazer um Teste A/B?
+
+Se mesmo chegando até aqui você não foi convencido a implementar um Teste A/B, vou reforçar trazendo uma frase que acredito resumir bem a essência dessa técnica:
+
+> Um Teste A/B remove a subjetividade das decisões em virtude das **EVIDÊNCIAS ESTATÍSTICAS**. Priorize os dados e menos o instinto.
+
+Além de tomar decisões baseadas em dados, você reduz o risco da mudança e conhece de verdade o impacto do seu trabalho, utilizando usuários para testar seu sistema.

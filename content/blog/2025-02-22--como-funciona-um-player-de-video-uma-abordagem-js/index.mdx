@@ -1,0 +1,273 @@
+---
+title: Como funciona um Player de Vídeo? Uma abordagem em JavaScript
+slug: como-funciona-um-player-de-video-uma-abordagem-js
+description: É difícil imaginar, nos dias de hoje, que, após um dia cansativo de trabalho, não aproveitemos algumas horas em frente à TV, seja assistindo a uma boa série ou filme, seja passando raiva com uma partida de futebol do seu time.
+date: 2025-02-22
+lastUpdated: 2025-02-22
+image: /images/como-funciona-um-player-de-video-uma-abordagem-js/usuario_cansado.gif
+tags:
+  - Front-end
+---
+
+É difícil imaginar, nos dias de hoje, que, após um dia cansativo de trabalho, não aproveitemos algumas horas em frente à TV, seja assistindo a uma boa série ou filme, seja passando raiva com uma partida de futebol do seu time.
+
+<img
+  src="/images/como-funciona-um-player-de-video-uma-abordagem-js/usuario_cansado.gif"
+  alt="Homem cansado assistindo TV"
+  style={{ margin: "0 auto" }}
+/>
+
+Embora atualmente existam várias opções de serviços de streaming, como Netflix, Disney+, Globoplay e Max, nem sempre foi fácil consumir esse tipo de conteúdo pela internet — muito menos de forma rápida.
+
+As pessoas mais jovens talvez não se lembrem da dificuldade de conectar transmissões ao vivo pelo Justin.tv (que mais tarde se tornou a Twitch) em uma internet lenta. Ou dos longos tempos de carregamento para assistir a vídeos curtos no YouTube. Com certeza, hoje nossa experiência melhorou muito!
+
+Desde os primeiros modelos de streaming do final dos anos 90 até hoje, grandes evoluções aconteceram. Um dos componentes principais dessa tecnologia, porém, passou por atualizações significativas e é o foco principal deste artigo: os players de vídeo.
+
+## Ascensão e queda do Flash Player
+
+Durante os anos 2000, a reprodução de vídeos na Web dependia quase que exclusivamente do plugin Adobe Flash, assim como animações, jogos e outros conteúdos multimídia.
+
+Devido ao alto consumo de recursos e a alguns problemas de segurança, o Adobe Flash foi descontinuado em 2020. Com o lançamento do HTML5 e a introdução da tag `<video>`, as páginas Web passaram a integrar áudio e vídeo sem a necessidade de plugins de terceiros.
+
+Curiosamente, antes de trabalhar no Player de vídeo da Globo, eu imaginava que os players de maneira geral se limitavam a componentes front-end com pouca ou quase nenhuma regra de negócio para execução do streaming. Eu estava errado.
+
+## Media Source Extensions
+
+De maneira geral, para executarmos um vídeo numa página HTML basicamente precisaremos de um arquivo de vídeo válido e a tag `<video>` para isso:
+
+```html
+<video controls autoplay>
+  <source src="filme.mp4" type="video/mp4" />
+  <source src="filme.ogg" type="video/ogg" />
+  Seu browser não suporta a tag video.
+</video>
+```
+
+Mas sinto dizer que isso não é streaming de verdade. Aqui, nossa página HTML está carregando o arquivo de vídeo inteiro de uma vez só, o que traz várias implicações para a aplicação. O primeiro e mais evidente é o consumo elevado de banda e memória. Imagine tentar assistir a um filme de quase 3 horas em qualidade 4K — o carregamento seria demorado e exigiria muitos recursos. O segundo, e não menos importante, é a falta de suporte para a exibição de conteúdo ao vivo. Afinal, qual seria o formato de arquivo de um vídeo ao vivo?
+
+Para responder a essa e muitas outras dúvidas, surge o Media Source Extensions (MSE), um conjunto de recursos em JavaScript que oferece um controle muito maior sobre a reprodução de vídeos em páginas web. Com o MSE, é possível substituir o valor da propriedade `src` da tag `<video>` por um objeto [MediaSource](https://developer.mozilla.org/en-US/docs/Web/API/MediaSource), responsável por gerenciar os dados e o estado do vídeo.
+
+<img
+  src="/images/como-funciona-um-player-de-video-uma-abordagem-js/mse.png"
+  alt="MSE"
+  style={{ margin: "0 auto" }}
+/>
+
+Dito isso, vamos criar uma aplicação web que utiliza o MSE para reproduzir vídeo, com o objetivo de explorar o potencial dessa API. Para agilizar o setup do projeto, podemos usar o [Vite](https://vite.dev/) para criar um projeto Vanilla (JavaScript puro).
+
+Com NPM instalado na máquina, vamos criar o projeto definindo seu nome como `html5-mse-player` e escolhendo o framework `Vanilla`:
+
+```
+npm create vite@latest html5-mse-player --template vanilla
+```
+
+Em seguida, precisamos acessar a pasta do projeto e instalar todas as suas dependências:
+
+```
+ cd html5-mse-player
+ npm install
+ npm run dev
+```
+
+Podemos apagar os arquivos criados pelo Vite, com exceção da pasta `/node_modules`. Além disso, vamos mover o `index.html` e `main.js` para a raiz do projeto:
+
+```
+./node_modules/
+main.js
+index.html
+package.json
+```
+
+No `index.html`, criaremos um HTML básico apenas com uma tag `<video>` que será gerenciada pelo objeto MSE em `main.js`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>HTML5 Player MSE</title>
+  </head>
+  <body>
+    <video controls id="videoElement"></video>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
+```
+
+Por fim, no arquivo `main.js` vamos instanciar um objeto `MediaSource` e atribuí-lo a uma `URL` na propriedade `src`:
+
+```javascript
+const videoElement = document.getElementById("videoElement");
+const mediaSource = new MediaSource();
+videoElement.src = URL.createObjectURL(mediaSource);
+```
+
+Ao rodar o comando `npm run dev` e acessar a aplicação no navegador, podemos perceber que o player de vídeo é exibido corretamente, mas apresenta um carregador em execução sem mostrar o conteúdo. Isso acontece porque o objeto MediaSource está aguardando a inserção do _Source Buffer_.
+
+<img
+  src="/images/como-funciona-um-player-de-video-uma-abordagem-js/player_loading.png"
+  alt="Player de vídeo carregando"
+  style={{ margin: "0 auto" }}
+/>
+
+## Source Buffer
+
+Quando pensamos em streaming, o verdadeiro segredo por trás do seu funcionamento está na segmentação do conteúdo. Em termos simples, um vídeo transmitido por streaming é dividido em pequenos pedaços chamados _chunks_ ou segmentos. Esses fragmentos permitem que o conteúdo seja carregado e reproduzido de forma contínua, sem a necessidade de baixar o arquivo completo. Isso torna a transmissão mais eficiente, adaptável à conexão do usuário e essencial para uma experiência de reprodução fluida.
+
+<img
+  src="/images/como-funciona-um-player-de-video-uma-abordagem-js/chunks.png"
+  alt="Chunks de vídeo"
+  style={{ margin: "0 auto" }}
+/>
+
+Compreendido o processo de segmentação, podemos retomar nosso exemplo prático. O vídeo não é inserido diretamente no objeto MediaSource. Em vez disso, os [Source Buffers](https://developer.mozilla.org/en-US/docs/Web/API/SourceBuffer) são utilizados: eles armazenam os segmentos do vídeo e os adicionam ao objeto associado à propriedade `src` da tag `<video>`.
+
+Voltando ao código, precisamos definir uma lista de segmentos (chunks) de vídeo que será adicionada ao Source Buffer no objeto MSE. Além disso, é essencial especificar o formato e o codec do vídeo para garantir que o navegador possa decodificar o conteúdo corretamente:
+
+```javascript
+const mimeCodec = 'video/mp4; codecs="avc1.4D401F"';
+const videoChunks = [
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_0.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_1.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_2.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_3.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_4.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_5.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_6.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_7.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_8.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_9.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_10.m4v",
+];
+```
+
+Agora é possível adicionar o evento `sourceopen` ao objeto `mediaSource`. Esse evento é acionado quando o MediaSource está pronto para receber dados. A partir desse momento, podemos começar a inserir cada pedaço de vídeo no Source Buffer. Assim que os segmentos são adicionados, o player deve iniciar o download e a reprodução do conteúdo:
+
+```javascript
+mediaSource.addEventListener("sourceopen", () => {});
+```
+
+## Media Segments
+
+É importante entendermos que, mesmo sendo uma aplicação front-end, o player precisa buscar esses segmentos de vídeo em um servidor. O conteúdo completo é previamente segmentado em pequenos pedaços de alguns segundos e armazenado em um servidor. O Player, então, consome esses chunks conforme necessário, realizando o download sob demanda.
+
+As URLs dos chunks são, então, organizadas de forma sequencial no servidor, permitindo que o Player faça a leitura dos segmentos na ordem correta. Isso garante que os trechos sejam reproduzidos cronologicamente, preservando a fluidez e a integridade do conteúdo original.
+
+```
+./video/
+  |___chunk_0.mp4
+  |___chunk_1.mp4
+  |___chunk_2.mp4
+  |___chunk_3.mp4
+```
+
+Ao final, nosso código agora deve adicionar os chunks ao SourceBuffer e posteriormente fazer download desses segmentos:
+
+```javascript
+mediaSource.addEventListener("sourceopen", onSourceOpen);
+
+function onSourceOpen() {
+  const mediaSource = this;
+  const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+
+  let currentSegmentIndex = 0;
+
+  sourceBuffer.addEventListener("updateend", () => {
+    if (!sourceBuffer.updating && currentSegmentIndex < videoChunks.length) {
+      fetchVideoSegment(videoChunks[currentSegmentIndex], sourceBuffer);
+      currentSegmentIndex++;
+    } else if (currentSegmentIndex >= videoChunks.length) {
+      mediaSource.endOfStream();
+    }
+  });
+
+  sourceBuffer.addEventListener("error", (e) => {
+    console.error("SourceBuffer error:", e);
+  });
+
+  fetchVideoSegment(videoChunks[currentSegmentIndex], sourceBuffer);
+  currentSegmentIndex++;
+}
+
+function fetchVideoSegment(url, sourceBuffer) {
+  fetch(url)
+    .then((response) => response.arrayBuffer())
+    .then((data) => {
+      if (!sourceBuffer.updating) {
+        sourceBuffer.appendBuffer(data);
+      }
+    })
+    .catch((error) => console.error("Error fetching video segment:", error));
+}
+```
+
+Nosso `main.js` deve estar dessa forma:
+
+```javascript
+const mimeCodec = 'video/mp4; codecs="avc1.4D401F"';
+const videoChunks = [
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_0.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_1.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_2.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_3.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_4.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_5.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_6.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_7.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_8.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_9.m4v",
+  "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_3840x2160_12000k/bbb_30fps_3840x2160_12000k_10.m4v",
+];
+
+const videoElement = document.getElementById("videoElement");
+const mediaSource = new MediaSource();
+videoElement.src = URL.createObjectURL(mediaSource);
+
+mediaSource.addEventListener("sourceopen", onSourceOpen);
+
+function onSourceOpen() {
+  const mediaSource = this;
+  const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+
+  let currentSegmentIndex = 0;
+
+  sourceBuffer.addEventListener("updateend", () => {
+    if (!sourceBuffer.updating && currentSegmentIndex < videoChunks.length) {
+      fetchVideoSegment(videoChunks[currentSegmentIndex], sourceBuffer);
+      currentSegmentIndex++;
+    } else if (currentSegmentIndex >= videoChunks.length) {
+      mediaSource.endOfStream();
+    }
+  });
+
+  sourceBuffer.addEventListener("error", (e) => {
+    console.error("SourceBuffer error:", e);
+  });
+
+  fetchVideoSegment(videoChunks[currentSegmentIndex], sourceBuffer);
+  currentSegmentIndex++;
+}
+
+function fetchVideoSegment(url, sourceBuffer) {
+  fetch(url)
+    .then((response) => response.arrayBuffer())
+    .then((data) => {
+      if (!sourceBuffer.updating) {
+        sourceBuffer.appendBuffer(data);
+      }
+    })
+    .catch((error) => console.error("Error fetching video segment:", error));
+}
+```
+
+Isso aí! Agora, com o projeto rodando, temos um Player funcional que transmite vídeo em tempo real por meio de streaming segmentado.
+
+<img
+  src="/images/como-funciona-um-player-de-video-uma-abordagem-js/player_final.png"
+  alt="Player de vídeo finalizado"
+  style={{ margin: "0 auto" }}
+/>
+
+O universo dos streamings e players de vídeo vai muito além do que exploramos aqui. Ainda há muito a descobrir, como os diferentes protocolos de streaming e cenários avançados de implementação. Mas isso fica para um próximo post!
+
+Quer ver o código completo deste projeto? Confira no repositório [HTML 5 MSE Player](https://github.com/paulocesarjr/html5-mse-player).

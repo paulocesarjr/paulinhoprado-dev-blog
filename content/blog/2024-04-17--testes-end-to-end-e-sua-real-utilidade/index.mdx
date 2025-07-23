@@ -1,0 +1,92 @@
+---
+title: Testes end-to-end e sua real utilidade
+slug: testes-end-to-end-e-sua-real-utilidade
+description: Implementar testes durante o desenvolvimento de um software é sempre um assunto delicado. Apesar de serem apreciados por muitos e odiados por outros, a prática de testar é uma garantia de funcionamento e qualidade.
+date: 2024-04-17
+lastUpdated: 2024-04-17
+image: /images/testes-end-to-end-e-sua-real-utilidade/teste_cypress.gif
+tags:
+  - Testes
+---
+
+Implementar testes durante o desenvolvimento de um software é sempre um assunto delicado. Apesar de serem apreciados por muitos e odiados por outros, a prática de testar é uma garantia de funcionamento e qualidade. Além disso, testes contribuem potencialmente para eventuais refatorações no código.
+
+Neste artigo, busco questionar a necessidade de implementações de testes end-to-end (ponta a ponta) em sistemas reais e discutir os melhores casos para sua aplicabilidade.
+
+## A verdade sobre o end-to-end
+
+Recentemente, junto ao meu time de Player Web na Globo, discutimos a necessidade de incluirmos testes end-to-end ao nosso fluxo de desenvolvimento. Após algumas pesquisas e a criação de uma _POC_ feita em [Cypress](https://www.cypress.io/), ficamos bem impressionados com as facilidades da ferramenta. 
+
+Evoluindo as discussões, chegamos à pergunta mais relevante: _O que devemos testar?_ De fato, qualquer player de vídeo possui uma infinidade de cenários que podem ser testados. Comportamentos simples como iniciar um vídeo, pausar, avançar, retroceder podem ser bons casos para iniciar a criação de testes. Mas até que ponto essas funcionalidade só são garantidas através de testes ponta a ponta?
+
+Eis que surge a verdade sobre o teste end-to-end: **_Eles nem sempre são necessários!_**
+
+<div style={{ textAlign: 'center' }}>
+  <img 
+    src="/images/testes-end-to-end-e-sua-real-utilidade/piramide-dos-testes.png" 
+    alt="Pirâmide dos testes" 
+    style={{ maxWidth: '100%', height: 'auto' }}
+  />
+  <p style={{ fontStyle: 'italic', color: '#666' }}>
+    💡 Pirâmide dos testes automatizados.
+  </p>
+</div>
+
+Analisando a clássica Pirâmide dos Testes, podemos perceber que os testes end-to-end representam o custo mais alto de implementação e têm uma velocidade mais lenta de resposta. Considerando um cenário empresarial, onde tempo e dinheiro são recursos valiosos, é evidente que esse tipo de teste deve ser evitado. No entanto, esse ainda não é o único motivo pelo qual chegamos à conclusão de que o end-to-end nem sempre é necessário.
+
+Voltando a base da pirâmide, encontramos os testes unitários. Esses, por sua vez, exigem menos esforço e retornam uma validação mais rápida. Foi aí que surgiu o ponto relevante dessa discussão. Nosso player de vídeo possui uma cobertura considerável de testes unitários, muitos dos quais testam comportamentos que seriam plenamente aplicáveis em testes end-to-end.
+
+Dado esse cenário, a decisão do nosso time foi priorizar a construção de testes de unidade em vez dos end-to-end. Mas será que os testes unitários testam tudo que precisamos?
+
+## O dilema dos tipos de teste
+
+Um bom exemplo para mostrar esse contraste entre os dois tipos de teste é levarmos ao cenário do Player de vídeo. Considere que devemos escrever um teste para garantir o funcionamento de assistir ao vídeo ao no Player: _Quando o usuário clicar no botão de play, o vídeo deve ser iniciado_.
+
+Criando um teste end-to-end para esse caso utilizando Cypress, teríamos algo nesse sentido:
+
+<img 
+  src="/images/testes-end-to-end-e-sua-real-utilidade/teste_cypress.gif" 
+  alt="Teste E2E com Cypress" 
+  style={{ maxWidth: '100%', display: 'block', margin: '0 auto' }}
+/>
+
+Agora, usando alguma biblioteca de teste unitário como Jest ou Jasmine, por exemplo, essa seria a implementação do teste:
+
+```javascript
+it('video should start when play button is clicked', () => {
+  const player = new Player('test.mp4')
+  player.playButton.click()
+  expect(player.isPlaying).toBe(true)
+})
+```
+
+Note que os dois exemplos testam o mesmo comportamento. Obviamente, cada tipo de teste dentro dos seus limites. Enquanto o teste end-to-end valida o comportamento na aplicação final, simulando a interação do usuário, o teste de unidade valida o comportamento isolado do componente de play.
+
+Se ambos os tipos de teste cumprem o objetivo esperado, podemos optar pela estratégia que consome menos recursos da stack de desenvolvimento, o que nesse caso é o teste de unidade.
+
+Então os testes end-to-end são descartáveis para todos os sistemas? **A resposta é não!**
+
+Vamos considerar um segundo cenário para teste: _Garantir que pelo menos uma publicidade seja exibida antes do vídeo começar_.
+
+Seguindo a lógica do menor recurso, é possível criar testes de unidade que simulem a exibição de anúncios no Player de vídeo por meio de mocks. No entanto, essa decisão traz consigo um dilema: _Como garantir que a publicidade seja realmente exibida se ela parte de uma simulação?_.
+
+Esse é um exemplo do limite que os testes unitários não ultrapassam e a oportunidade definitiva para a implementação de um teste end-to-end, que por sua vez, testa a aplicação real, sem simulações.
+
+A partir dessa reflexão, destaco alguns pontos importantes sobre a utilização desses tipos de teste:
+
+- Se um comportamento pode ser validado através de um teste unitário, deve-se dar preferência a esse tipo de teste em vez do teste end-to-end;
+- Testes end-to-end são ótimos para evitar o uso de mocks e dados simulados;
+- Para cenários onde é difícil simular ou que exigem a interação do usuário diretamente, testes end-to-end são a melhor opção;
+- Em determinados cenários, um teste end-to-end pode garantir a mesma cobertura que um conjunto de testes de unidade e integração.
+
+## Cypress pode me ajudar?
+
+Entre as várias ferramentas de testes automatizados do mercado, algumas consolidadas como o Selenium, o Cypress se destaca por atuar diretamente no navegador, permitindo interação direta com a DOM.
+
+Para os sistemas que utilizam a stack JavaScript, a combinação pode ser perfeita, uma vez que o framework não exige instalações complexas e muito menos automações externas para sua execução. Um dos pontos altos dessa ferramenta é a capacidade de realizar testes em tempo real, proporcionando uma abordagem mais prática para identificação de falhas. Além disso, ela conta com uma funcionalidade específica de "time travel" de depuração.
+
+Como mencionado anteriormente, o cenário de entrega de publicidade dentro do Player da Globo foi uma boa oportunidade para experimentar esse framework. Considerando a complexidade para a construção de um possível teste de integração e a necessidade de validar a entrega por completo, o Cypress atendeu às expectativas.
+
+<img src="/images/testes-end-to-end-e-sua-real-utilidade/teste_ad_e2e.webp" alt="Teste E2E com Cypress" style={{ maxWidth: "100%", display: "block", margin: "0 auto" }} />
+
+Por outro lado, cenários mais simples, como a validação de comportamento de componentes isolados, não justificam sua utilização, uma vez que podem ser facilmente testados com testes de unidade.

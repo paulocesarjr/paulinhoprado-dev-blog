@@ -1,0 +1,320 @@
+---
+
+title: Micro-frontends na prática
+slug: micro-frontends-na-pratica
+description: Há alguns anos, trabalhei em uma empresa onde tentamos dividir uma única aplicação front-end em partes menores, independentes e isoladas. Bom... não deu muito certo. Talvez por falta de conhecimento ou pelas limitações tecnológicas da época.
+date: 2025-03-16
+lastUpdated: 2025-03-16
+image: /images/micro-frontends-na-pratica/simpsons-homer.gif
+tags:
+- Front-end
+
+---
+
+Há alguns anos, trabalhei em uma empresa onde tentamos dividir uma única aplicação front-end em partes menores, independentes e isoladas. Bom... não deu muito certo. Talvez por falta de conhecimento ou pelas limitações tecnológicas da época. O resultado foi uma SPA (_Single Page Application_) em Angular que carregava diversos _iframes_, cada um executando outra SPA em Angular. De fato, conseguimos um certo "desacoplamento", mas, em contrapartida, a performance da aplicação principal despencou. O alto consumo de memória e a demora para carregar os _iframes_ tornaram claro que teria sido melhor manter tudo em uma única aplicação.
+
+<img
+  src="/images/micro-frontends-na-pratica/simpsons-homer.gif"
+  alt="Homer Simpson"
+  style={{ margin: "0 auto" }}
+/>
+
+Mesmo após esse desafio, a experiência não me desanimou. A ideia por trás dos Micro-frontends continuava me fascinando, e eu não conseguia aceitar completamente que a tentativa havia dado errado. Por isso, segui estudando o conceito e buscando maneiras mais eficientes de implementá-lo. Neste artigo, quero apresentar uma abordagem que teria sido muito útil naquela época — e que pode ajudar quem enfrenta desafios semelhantes.
+
+## Dividir para conquistar
+
+O conceito de Micro-frontends é simples de entender. Diferente das aplicações monolíticas, onde todo o front-end é carregado e servido por uma única estrutura, os Micro-frontends permitem que pequenos componentes sejam isolados e carregados independentemente por uma ou mais aplicações.
+
+<img
+  src="/images/micro-frontends-na-pratica/micro-frontends.png"
+  alt="Arquitetura de micro-frontend"
+  style={{ margin: "0 auto" }}
+/>
+
+Imagine uma loja virtual com vários elementos na tela, cada um com uma função específica. Se toda a interface for disponibilizada por um único servidor, temos um front-end monolítico. Mas se, por exemplo, o carrinho de compras for muito complexo e exigir regras de negócio específicas, ele pode ser desacoplado e hospedado separadamente, até mesmo em um repositório diferente. Dessa forma, outras lojas virtuais podem reutilizá-lo facilmente, garantindo maior flexibilidade e escalabilidade.
+
+Um dos grandes diferenciais dos Micro-frontends é a flexibilidade tecnológica. Não é necessário restringir-se a um único _framework_ para desenvolver toda a aplicação. É possível criar componentes em diferentes tecnologias e integrá-los a uma aplicação central.
+
+Por exemplo, imagine um sistema de aluguel de imóveis onde o front-end principal é feito em React, mas os componentes responsáveis por exibir as informações dos imóveis são Micro-frontends desenvolvidos em Angular.
+
+<img
+  src="/images/micro-frontends-na-pratica/micro-frontend-imoveis.png"
+  alt="Aplicação de aluguel de imóveis com Micro-frontends"
+  style={{ margin: "0 auto" }}
+/>
+
+Essa interoperabilidade é uma das grandes vantagens do desacoplamento. No fim das contas, tudo é JavaScript!
+
+## Federation
+
+Em um belo dia, o Webpack introduziu o [Module Federation](https://webpack.js.org/concepts/module-federation/) na versão 5, revolucionando a forma como aplicações compartilham dependências. Esse recurso permite definir módulos que podem ser carregados dinamicamente, mesmo estando em projetos diferentes.
+
+Na prática, ele define uma aplicação container (_host_), responsável por carregar módulos independentes expostos (_remotes_) por outras aplicações. Essa abordagem torna os Micro-frontends ainda mais eficientes, aplicando [_Code Splitting_](https://webpack.js.org/guides/code-splitting/) para carregar componentes sob demanda, evitando que façam parte do bundle final desnecessariamente.
+
+Para demonstrar essa mágica na prática, vamos criar duas aplicações React simples que, juntas, formarão uma dashboard de jogadores de um time de futebol. A ideia é que a lista de jogadores seja uma aplicação independente, desenvolvida em React, e que será carregada como um Micro-frontend dentro da aplicação principal, que será responsável por exibi-la.
+
+Vamos utilizar o [Vite](https://vite.dev/) para criar duas aplicações React:
+
+- **container**: a aplicação principal, que servirá como host do Micro-frontend.
+- **players** : a aplicação independente que exibirá a lista de jogadores.
+
+No **container**, o componente `App.jsx` terá um HTML básico com um título para a aplicação:
+
+```jsx
+// 📂 container/src/App.jsx
+
+import "./App.css";
+
+function App() {
+  return (
+    <>
+      <h1>⚽ Soccer Dashboard Micro-frontend</h1>
+    </>
+  );
+}
+
+export default App;
+```
+
+No nosso projeto **players**, criaremos um componente `Players.jsx` que fará uma listagem de jogadores de futebol. Ao clicar em um jogador, acionaremos uma função de callback para enviar seus dados para uso externo:
+
+```jsx
+// 📂 players/src/Players.jsx
+
+import "./Player.css";
+
+const team = [
+  {
+    name: "Martin Braithwaite",
+    photo:
+      "https://s3p.sofifa.net/5f55c5509a088da5658cfc69b31be62f7595778e.png",
+    position: "ATA",
+  },
+  {
+    name: "Franco Cristaldo",
+    photo:
+      "https://s3p.sofifa.net/8909750ea3bdec2d403fd56c3bfe5571e7880a52.png",
+    position: "MEI",
+  },
+  {
+    name: "Gustavo Cuellar",
+    photo:
+      "https://s3p.sofifa.net/14b4aaa618de1a853f4298694e7751ec30a43f7b.png",
+    position: "VOL",
+  },
+  {
+    name: "Jamerson",
+    photo:
+      "https://s3p.sofifa.net/f12d7b370613b35527a35a328716313dfbdbde94.png",
+    position: "ZAG",
+  },
+  {
+    name: "Tiago Volpi",
+    photo:
+      "https://s3p.sofifa.net/04736af5928a0443fa2ec4bf8d84e1524cfde82d.png",
+    position: "GOL",
+  },
+];
+
+function Players({ onPlayerSelected }) {
+  return (
+    <ul className="team">
+      {team.map((player, index) => (
+        <a
+          key={index}
+          className="team__player"
+          onClick={() => onPlayerSelected(player)}
+        >
+          <li>
+            <div>
+              <img
+                src={player.photo}
+                alt={player.name}
+                className="team__player--photo"
+              />
+            </div>
+            <div className="team__player--info">
+              <p>
+                <strong>Nome:</strong> {player.name}
+              </p>
+              <p>
+                <strong>Posição:</strong> {player.position}
+              </p>
+            </div>
+          </li>
+        </a>
+      ))}
+    </ul>
+  );
+}
+
+export default Players;
+```
+
+Uma vez que nossos componentes foram criados, chegou a hora de carregar o componente `Players.jsx` como um Micro-frontend dentro do `App.jsx` do projeto **container**. Para isso, vamos instalar uma abstração do Module Federation feita especificamente para o Vite: [`vite-plugin-federation`](https://github.com/originjs/vite-plugin-federation).
+
+Em ambos os projetos, **container** e **players**, vamos rodar o seguinte comando:
+
+```
+yarn add @originjs/vite-plugin-federation --dev
+```
+
+No projeto **players**, em `players/vite.config.js`, vamos importar a biblioteca federation e definir um nome para nosso Micro-frontend. Além disso, especificaremos na propriedade `exposes` quais componentes React serão disponibilizados para outras aplicações.
+
+A propriedade `filename` define um arquivo JavaScript que contém o bundle desses componentes expostos.
+
+```js
+// 📂 players/vite.config.js
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import federation from "@originjs/vite-plugin-federation";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    federation({
+      name: "players",
+      filename: "remoteEntry.js",
+      exposes: {
+        "./Players": "./src/Players",
+      },
+      shared: ["react", "react-dom"],
+    }),
+  ],
+  build: {
+    target: "esnext",
+    minify: false,
+    cssCodeSplit: false,
+  },
+  preview: {
+    host: "localhost",
+    port: 5002,
+    strictPort: true,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+    },
+  },
+});
+```
+
+Ao executar o comando `yarn vite preview`, podemos acessar esse arquivo no navegador através de `http://localhost:5002/assets/remoteEntry.js`.
+
+<img
+  src="/images/micro-frontends-na-pratica/remoteEntry.png"
+  alt="Arquivo remoteEntry.js"
+  style={{ margin: "0 auto" }}
+/>
+
+Já no projeto **container**, em `container/vite.config.js`, vamos importar a biblioteca `federation` e definir, na propriedade `remotes`, o endereço do bundle do componente players. Com isso, ele passará a ser disponibilizado dentro do escopo desse projeto:
+
+```js
+// 📂 container/vite.config.js
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import federation from "@originjs/vite-plugin-federation";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    federation({
+      name: "container_app",
+      remotes: {
+        players: "http://localhost:5002/assets/remoteEntry.js",
+      },
+      shared: {
+        react: {
+          singleton: true,
+          requiredVersion: "^18.0.0",
+        },
+        "react-dom": {
+          singleton: true,
+          requiredVersion: "^18.0.0",
+        },
+      },
+    }),
+  ],
+  build: {
+    modulePreload: false,
+    target: "esnext",
+    minify: false,
+    cssCodeSplit: false,
+  },
+});
+```
+
+Após configurar corretamente o Federation, podemos importar o componente `Players.jsx` dentro de `App.jsx`, como se ele fosse parte integrante do mesmo projeto. Esse processo torna o Micro-frontend funcional, permitindo que o componente seja carregado e utilizado na aplicação principal sem complicações, mantendo a estrutura modular e desacoplada:
+
+```jsx
+import "./App.css";
+import Players from "players/Players";
+
+function App() {
+  return (
+    <>
+      <h1>⚽ Soccer Dashboard Micro-frontend</h1>
+      <Players />
+    </>
+  );
+}
+
+export default App;
+```
+
+Podemos expandir ainda mais a funcionalidade ao acessar o callback `onPlayerSelected` no projeto **container**. Dessa forma, quando um jogador for selecionado na aplicação de **players**, suas informações serão passadas para o projeto **container**. No `App.jsx` do **container**, podemos capturar esses dados e exibi-los, proporcionando uma integração dinâmica entre os Micro-frontends.
+
+Isso mantém a modularidade e desacoplamento, enquanto ainda permite a comunicação entre os componentes de diferentes projetos:
+
+```jsx
+import { useState } from "react";
+import "./App.css";
+import Players from "players/Players";
+
+function App() {
+  const [player, setPlayer] = useState(null);
+
+  const selectPlayer = (player) => {
+    setPlayer(player);
+  };
+
+  return (
+    <>
+      <h1>⚽ Soccer Dashboard Micro-frontend</h1>
+      <div className="dashboard">
+        <div className="dashboard__team">
+          <Players onPlayerSelected={selectPlayer} />
+        </div>
+        <div className="dashboard__player">
+          {player && (
+            <>
+              <h2>{player.name}</h2>
+              <img
+                className="dashboard__player--photo"
+                src={player.photo}
+                alt="Foto do Jogador"
+              />
+              <h3>{player.position}</h3>
+            </>
+          )}
+          {!player && <h2>Selecione um dos jogadores a esquerda</h2>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default App;
+```
+
+Após rodar o comando `yarn build && yarn vite preview` no projeto **players**, ele estará pronto para expor o componente `Players.jsx`. Já no projeto **container**, ao rodar `yarn run dev`, a aplicação estará disponível em `http://localhost:5173/`. Lá, você poderá visualizar a aplicação React completa, com o Micro-frontend do componente de jogadores integrado e interativo, exibindo as informações corretamente ao clicar em cada jogador.
+
+<img
+  src="/images/micro-frontends-na-pratica/aplicacao_final.png"
+  alt="Aplicação final com Micro-frontend"
+  style={{ margin: "0 auto" }}
+/>
+
+Ao explorar a implementação de Micro-frontends, vimos que essa abordagem pode trazer grandes benefícios, como maior modularização, escalabilidade e flexibilidade no uso de diferentes tecnologias. Porém, também existem desafios, como a complexidade adicional na comunicação entre Micro-frontends e a possível sobrecarga de performance. Esses aspectos devem ser considerados ao escolher adotar essa arquitetura. Para conferir o código completo do projeto, acesse meu repositório no GitHub: [Soccer Dashboard Micro-frontend](https://github.com/paulocesarjr/soccer-dashboard-microfrontend).

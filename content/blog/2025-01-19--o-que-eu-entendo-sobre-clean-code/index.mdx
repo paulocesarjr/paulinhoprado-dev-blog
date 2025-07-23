@@ -1,0 +1,313 @@
+---
+title: O que eu entendo sobre Clean Code?
+slug: o-que-eu-entendo-sobre-clean-code
+description: Quando comecei a me aprofundar no estudo das boas práticas de desenvolvimento de software, imaginava que Código Limpo fosse apenas um conjunto de regras a serem seguidas para garantir um código legível.
+date: 2025-01-19
+lastUpdated: 2025-01-19
+image: /images/o-que-eu-entendo-sobre-clean-code/uncle_bob.gif
+tags:
+  - Algoritmos
+---
+
+Quando comecei a me aprofundar no estudo das boas práticas de desenvolvimento de software, imaginava que Código Limpo (_Clean Code_) fosse apenas um conjunto de regras a serem seguidas para garantir um código legível. Em parte, é isso mesmo. No entanto, essas regras nem sempre se aplicam a todos os tipos de código e, com certeza, não são totalmente compreendidas apenas pela leitura de um livro.
+
+<img
+  src="/images/o-que-eu-entendo-sobre-clean-code/uncle_bob.gif"
+  alt="Robert C. Martin"
+  style={{ maxWidth: "100%", height: "auto", margin: "0 auto" }}
+/>
+
+## Código Limpo
+
+Há alguns meses, terminei de reler o clássico **Clean Code**, de Robert C. Martin, e tive uma percepção muito diferente da primeira vez que o li, há seis anos. Quando ainda estava começando na faculdade, muitos dos problemas apresentados nos capítulos não eram claros para mim, assim como as soluções propostas. Esse, talvez, seja o grande equívoco de quem busca aprender sobre Código Limpo: não é algo destinado a iniciantes.
+
+> […] e se você fosse médico e um paciente exigisse que você parasse com toda aquela lavação de mão na preparação para a cirurgia só porque isso leva muito tempo? […] não é profissional que programadores cedam a vontade dos grandes gerentes que não entendem os riscos de se gerar códigos confusos.
+
+Considerando essa complexidade para iniciantes em programação, neste artigo procurei destacar os pontos que considerei mais relevantes durante a leitura, além de compartilhar algumas experiências adquiridas no dia a dia de trabalho.
+
+## Funções
+
+Uma função bem escrita deve ter uma única responsabilidade: ela deve fazer uma coisa, fazê-la bem e apenas isso. Quando tentamos agrupar várias responsabilidades em uma única função, o código se torna difícil de ler, testar e manter.
+
+Considere o seguinte exemplo, em que uma função faz múltiplas tarefas para salvar e notificar usuários:
+
+```javascript
+function salvarUsuarioENotificar(usuario) {
+  // Valida os dados do usuário
+  if (!usuario.nome || !usuario.email) {
+    throw new Error("Dados do usuário incompletos.");
+  }
+
+  // Salva no banco de dados
+  bancoDeDados.salvar(usuario);
+
+  // Envia um e-mail de boas-vindas
+  emailService.enviarEmail(
+    usuario.email,
+    "Bem-vindo!",
+    "Obrigado por se cadastrar!"
+  );
+}
+```
+
+Essa função viola o princípio de responsabilidade única porque combina lógica de validação, persistência de dados e envio de e-mails.
+
+Após uma refatoração, cada responsabilidade é delegada a uma função específica:
+
+```javascript
+function validarUsuario(usuario) {
+  if (!usuario.nome || !usuario.email) {
+    throw new Error("Dados do usuário incompletos.");
+  }
+}
+
+function salvarUsuario(usuario) {
+  bancoDeDados.salvar(usuario);
+}
+
+function enviarEmailDeBoasVindas(usuario) {
+  emailService.enviarEmail(
+    usuario.email,
+    "Bem-vindo!",
+    "Obrigado por se cadastrar!"
+  );
+}
+
+function processarCadastroDeUsuario(usuario) {
+  validarUsuario(usuario);
+  salvarUsuario(usuario);
+  enviarEmailDeBoasVindas(usuario);
+}
+```
+
+Agora, cada função tem uma única responsabilidade, tornando o código mais legível e fácil de modificar ou estender no futuro.
+
+## Comentários
+
+Embora os comentários sejam úteis em muitos casos, devemos priorizar o uso de nomes autoexplicativos para evitar explicações redundantes ou desnecessárias. Comentários que apenas descrevem algo óbvio não acrescentam valor e podem até poluir o código.
+
+Veja este exemplo:
+
+```ts
+/** Dia do mês **/
+private number diaDoMes;
+```
+
+Este comentário é completamente desnecessário, já que o nome do atributo deixa claro o que ele representa. Podemos melhorar isso ao usar um nome ainda mais claro, caso necessário, e remover o comentário:
+
+```ts
+private number diaDoMesAtual;
+```
+
+Agora, o atributo é suficientemente descritivo e dispensa comentários.
+
+Considere uma função em que o comentário descreve sua finalidade de forma redundante:
+
+```javascript
+// Calcula a média de uma lista de números
+function calcular(lista) {
+  let soma = 0;
+  for (const numero of lista) {
+    soma += numero;
+  }
+  return soma / lista.length;
+}
+```
+
+Neste caso, o nome da função não é claro o suficiente, então a descrição foi "compensada" com um comentário. Podemos refatorar usando um nome mais específico:
+
+```javascript
+function calcularMedia(listaDeNumeros) {
+  let soma = 0;
+  for (const numero of listaDeNumeros) {
+    soma += numero;
+  }
+  return soma / listaDeNumeros.length;
+}
+```
+
+Agora, o nome da função transmite exatamente o que ela faz, eliminando a necessidade de um comentário.
+
+## Objetos e Estruturas de Dados
+
+Um bom design orientado a objetos foca em expor as operações que podem ser realizadas e esconder os detalhes de implementação. Isso promove encapsulamento, reduz o acoplamento e facilita a manutenção do código.
+
+Considere o exemplo abaixo:
+
+```ts
+class Circulo implements Forma {
+	private Ponto centro;
+	private number raio;
+	private number PI = 3.14159;
+
+	public number calcularArea() {
+		return PI * raio * raio;
+	}
+}
+```
+
+Observe que não precisamos saber o valor de `PI` nem como o cálculo da área é feito. O importante é que a classe `Circulo` fornece uma função pública, `calcularArea()`, que encapsula os detalhes de implementação. Quem utiliza a classe só precisa chamar essa função, sem se preocupar com os detalhes internos.
+
+Evite reutilizar variáveis em escopos diferentes para propósitos distintos, pois isso pode causar confusão e dificultar a leitura do código. Considere o exemplo abaixo, que viola essa prática:
+
+```javascript
+let resultado = 0;
+
+// Calcula a área
+resultado = PI * raio * raio;
+
+// Usa a mesma variável para o perímetro
+resultado = 2 * PI * raio;
+```
+
+Neste caso, o uso da mesma variável resultado para armazenar valores diferentes (área e perímetro) pode ser confuso. Uma solução melhor seria usar variáveis distintas:
+
+```javascript
+const area = PI * raio * raio;
+const perimetro = 2 * PI * raio;
+```
+
+Agora, o código é mais claro, autoexplicativo e menos propenso a erros.
+
+## Tratamento de Erros
+
+No passado, as técnicas para tratar e informar erros eram bastante limitadas. As opções geralmente se resumiam a criar uma flag de erro ou utilizar códigos de erro que precisavam ser constantemente verificados pelo chamador. Isso tornava o código mais verboso e menos legível.
+
+Considere o exemplo abaixo, que utiliza várias validações para lidar com erros fundamentais da execução:
+
+```javascript
+function desligarDispositivo() {
+  const handle = obterHandle(DEV1);
+
+  if (handle !== HandleDispositivo.INVALIDO) {
+    const registro = recuperarRegistroDispositivo(handle);
+
+    if (registro.getStatus() !== DISPOSITIVO_SUSPENSO) {
+      pausarDispositivo(handle);
+      limparFilaDeTrabalhoDispositivo(handle);
+      fecharDispositivo(handle);
+    } else {
+      logger.log("Dispositivo suspenso. Não foi possível desligar.");
+    }
+  } else {
+    logger.log("Handle inválido para: " + DEV1.toString());
+  }
+}
+```
+
+Embora funcional, esse código é verboso e repetitivo. Ele mistura lógica de validação, execução e tratamento de erros em um único lugar, dificultando a leitura e a manutenção.
+
+Em vez de checar manualmente várias condições, uma abordagem mais limpa é lançar exceções para erros. Isso permite centralizar o tratamento de falhas e focar apenas no fluxo principal dentro da função. Veja a refatoração:
+
+```javascript
+function desligarDispositivo() {
+  try {
+    tentarDesligarDispositivo();
+  } catch (erro) {
+    logger.log(erro.message);
+  }
+}
+
+function tentarDesligarDispositivo() {
+  const handle = obterHandle(DEV1);
+
+  if (handle === HandleDispositivo.INVALIDO) {
+    throw new Error("Handle inválido para o dispositivo: " + DEV1.toString());
+  }
+
+  const registro = recuperarRegistroDispositivo(handle);
+
+  if (registro.getStatus() === DISPOSITIVO_SUSPENSO) {
+    throw new Error("Dispositivo suspenso. Não é possível desligar.");
+  }
+
+  pausarDispositivo(handle);
+  limparFilaDeTrabalhoDispositivo(handle);
+  fecharDispositivo(handle);
+}
+```
+
+Agora, o código principal (`desligarDispositivo`) é mais conciso e foca no fluxo principal, enquanto os detalhes de validação e lançamento de erros foram movidos para `tentarDesligarDispositivo`.
+
+## Testes de unidade
+
+Testes limpos devem ser claros, simples e consistentes. Eles precisam transmitir muita informação com o menor número de expressões possíveis, deixando evidente o que está sendo testado e qual o resultado esperado.
+
+**Estrutura geral de um teste**
+
+1. _Construir_: Configure os dados ou o ambiente necessário para o teste.
+2. _Operar_: Realize a operação ou ação a ser testada.
+3. _Verificar_: Certifique-se de que o resultado está de acordo com o esperado.
+
+Considere o exemplo abaixo:
+
+```javascript
+it("deve retornar os dados em XML", () => {
+  const pagina = criarPaginaComConteudo("PaginaDeTeste", "conteudo de teste"); // 1️⃣ Constrói
+
+  pagina.enviarRequisicao("PaginaDeTeste", "tipo:xml"); // 2️⃣ Opera
+
+  expect(pagina.contem("conteudo de teste")).toBe(true); // 3️⃣ Verifica
+});
+```
+
+Ao escrever testes de unidade, lembre-se: clareza e foco são mais importantes do que cobrir muitos casos em um único teste. Isso torna a manutenção mais simples e eficiente, ajudando a detectar problemas com mais precisão.
+
+## Classes
+
+O nome da classe deve refletir claramente sua responsabilidade. Classes devem ser pequenas, com um único propósito e nome não ambíguo.
+
+**SRP - Princípio da Responsabilidade Única**
+
+Cada classe deve ter apenas uma responsabilidade e um motivo para mudar. Isso facilita a manutenção e a reutilização do código.
+
+Exemplo simples:
+
+```javascript
+class Sql {
+	Sql(tabela, colunas)
+	create()
+	insert(campos)
+	selectAll()
+	findByKey(coluna, valor)
+	// ...
+}
+```
+
+Quando uma classe acumula várias responsabilidades, ela viola o SRP, como no caso da classe `Sql` que teria múltiplos métodos (`create`, `insert`, `select`). Modificar qualquer parte pode afetar outras funcionalidades, aumentando o risco de falhas.
+
+**Refatoração para SRP:**
+
+```javascript
+class Sql {
+  constructor(tabela, colunas) {}
+  gerar() {}
+}
+
+class CreateSql extends Sql {
+  gerar() {}
+}
+
+class SelectSql extends Sql {
+  gerar() {}
+}
+
+class InsertSql extends Sql {
+  gerar() {}
+}
+```
+
+Agora, cada classe tem uma responsabilidade clara, seguindo o **Princípio de Aberto-Fechado (OCP)**, que diz que classes devem ser abertas para extensão, mas fechadas para modificação.
+
+## O que eu entendo sobre Código Limpo?
+
+Código Limpo não é algo que se aprende de uma vez só ou ao ler apenas um livro. É uma jornada contínua que exige prática, reflexão e evolução. Eu, pessoalmente, continuo aprendendo até hoje, aplicando e refinando essas boas práticas a cada novo projeto. O que aprendi ao longo do tempo é que a verdadeira habilidade em escrever código limpo vem com a experiência e a capacidade de perceber o que pode ser melhorado.
+
+Além disso, como nos ensina Kent Beck, um projeto de software "simples" deve seguir algumas regras fundamentais para garantir a qualidade e a clareza do código:
+
+1. Efetuar todos os testes
+2. Evitar duplicação de código
+3. Expressar claramente o propósito do programador
+4. Minimizar o número de classes e métodos
+
+Essas regras são apresentadas em ordem de relevância, e são um guia valioso para quem busca escrever código que seja não apenas funcional, mas também limpo, eficiente e de fácil manutenção. Aplique essas práticas no seu dia a dia e veja como seu código vai se tornar mais claro e robusto com o tempo!
