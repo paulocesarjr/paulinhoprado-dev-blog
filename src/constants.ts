@@ -15,7 +15,7 @@ export const SITE: Record<string, string> = {
 	/**
 	 * Used on index page and as a fallback if no title is set
 	 */
-	titleDefault: 'Software Engineer',
+	titleDefault: 'paulinhoprado.dev',
 	/**
 	 * Used in meta tags, RSS feed, and other places
 	 */
