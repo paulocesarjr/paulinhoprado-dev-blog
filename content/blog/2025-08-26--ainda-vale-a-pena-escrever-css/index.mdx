@@ -1,0 +1,65 @@
+---
+title: Ainda vale a pena escrever CSS?
+slug: ainda-vale-a-pena-escrever-css
+description: Antes de começar a expor minha opinião sobre esse tema polêmico, quero adiantar a conclusão deste artigo - sim, ainda vale a pena escrever CSS!
+date: 2025-08-26
+lastUpdated: 2025-08-26
+image: /images/ainda-vale-a-pena-escrever-css/deadpool.gif
+tags:
+  - Front-end
+---
+
+Antes de começar a expor minha opinião sobre esse tema polêmico, quero adiantar a conclusão deste artigo: sim, ainda vale a pena escrever CSS! Mas com algumas ressalvas importantes, que vou tentar abordar aqui.
+
+Como desenvolvedor front-end, sou um grande fã de CSS, especialmente de estruturas bem organizadas e reutilizáveis. No entanto, com a evolução da linguagem, o surgimento de diversos frameworks e utilitários de IA capazes de gerar CSS com facilidade, surge a questão: até que ponto precisamos realmente conhecer e dominar a escrita de CSS?
+
+## Criadores vs Consumidores de CSS
+
+É comum que times de desenvolvimento que mantêm style guides de suas aplicações precisem evoluir seus componentes e estilizações. Isso exige que o desenvolvedor tenha domínio sobre as propriedades CSS desses componentes. No entanto, essa não é a realidade para a maioria dos desenvolvedores que apenas consomem esses componentes, já que não há necessidade de conhecer todas as regras e detalhes da estilização dessas partes.
+
+<img
+  src="/images/ainda-vale-a-pena-escrever-css/deadpool.gif"
+  alt="Deadpool pintando um quadro"
+  style={{ margin: "0 auto" }}
+/>
+
+Imagine que você está prestes a criar um sistema de agendamento e decide utilizar o [Material UI](https://mui.com/material-ui/) como biblioteca de estilização. Ao criar uma tela de cadastro de eventos, você não precisará se preocupar com o espaçamento das grids ou a tipografia dos botões. Você simplesmente adicionará os componentes desejados à sua interface e esperará que eles funcionem corretamente.
+
+A questão é que a maioria dos times de desenvolvimento atua como consumidora de bibliotecas de CSS, e não como criadora. Esse contraste impacta diretamente a capacidade dos desenvolvedores de dominar ou não a linguagem.
+
+## O início do fim
+
+Eu diria que a necessidade de um desenvolvedor front-end se especializar em CSS começou a diminuir com o surgimento dos frameworks de estilização. Lembro bem que o primeiro que utilizei foi o [Bootstrap](https://getbootstrap.com/), há cerca de 10 anos. Na época, eu estava bastante focado em dominar o CSS e conhecer a maioria de suas propriedades. Por isso, foi uma dificuldade entender a mecânica de colunas e linhas do Grid. Até que, em um belo dia, percebi que o tempo de desenvolvimento de qualquer site ou aplicação reduzia pela metade, simplesmente pelo fato de não ser mais necessário escrever uma única linha de CSS ao usar o Bootstrap!
+
+Nessa mesma época surgiu a necessidade de toda aplicação web ser responsiva para dispositivos móveis, o que caiu como uma luva para quem trabalhava com Bootstrap. O sistema de prefixos de resolução resolvia muito bem essa tarefa, dispensando o esforço do desenvolvedor em lidar diretamente com media queries no CSS nativo. Bastava usar classes como `col-sm-12` ou `col-md-6` para definir como os elementos se comportariam em diferentes tamanhos de tela, sem escrever uma única linha de CSS adicional.
+
+Desde então, comecei a ouvir comentários que até aquele momento não eram muito comuns. Algo como: _“Por que vou escrever CSS se o Bootstrap já faz tudo por mim?”_
+
+## Frameworks não fazem tudo
+
+Atualmente, é difícil listar o que uma ferramenta de CSS, seja qual for, não é capaz de fazer. Os frameworks facilitam desde a construção de grids até o uso de estilos pré-montados, como os que popularizaram o [Tailwind](https://tailwindcss.com/). Mas eu diria que todos eles têm um calcanhar de Aquiles em comum: animações.
+
+Ao utilizar qualquer framework ou biblioteca, é preciso estar disposto a se adequar às regras impostas por essas ferramentas. No entanto, quando observamos um site repleto de animações ou transições complexas que flertam com a terceira dimensão, é quase certo que elas não foram construídas apenas com Bootstrap ou Tailwind. Geralmente, esses efeitos são elaborados por desenvolvedores que dominam CSS e suas manipulações em conjunto com JavaScript na árvore DOM. Portanto, se você realmente deseja criar esse tipo de aplicação, talvez seja melhor estudar bem CSS antes de optar por um framework.
+
+<p class="codepen" data-height="450" data-default-tab="css,result" data-slug-hash="xbwJqoJ" data-pen-title="Untitled" data-user="paulocesarrosajr" style="height: 300px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 2px solid; margin: 1em 0; padding: 1em;">
+  <span>See the Pen <a href="https://codepen.io/paulocesarrosajr/pen/xbwJqoJ">
+  Untitled</a> by Paulo Cesar Prado da Rosa Junior (<a href="https://codepen.io/paulocesarrosajr">@paulocesarrosajr</a>)
+  on <a href="https://codepen.io">CodePen</a>.</span>
+</p>
+<script async src="https://public.codepenassets.com/embed/index.js"></script>
+
+O exemplo acima é o tipo de coisa que Bootstrap ou Tailwind não oferecem direto. Aqui o domínio de CSS faz toda a diferença.
+
+## Saber ou não saber
+
+Afirmar se vale ou não a pena aprender CSS para um desenvolvedor front-end é, na verdade, muito simples: **sim, vale a pena!** Mas talvez não da maneira como estávamos acostumados. Hoje, acredito que o aprendizado de CSS é muito mais orientado pela necessidade do que pelos fundamentos. Ferramentas como o Figma já exportam blocos de código prontos baseados na UI projetada, e o ChatGPT já substitui as buscas intermináveis por snippets de CSS no Stack Overflow ou no CodePen.
+
+<img
+  src="/images/ainda-vale-a-pena-escrever-css/css-extractor.png"
+  alt="CSS Extractor Figma"
+  style={{ margin: "0 auto" }}
+/>
+
+Se o seu foco é construir aplicações web rapidamente, aproveite a infinidade de frameworks e bibliotecas de CSS disponíveis e não se preocupe por não conhecer uma propriedade específica, alguém já sofreu antes para resolvê-la por você.
+
+Agora, se o seu objetivo é criar interfaces robustas, com interações refinadas e animações complexas, aí sim eu recomendaria dedicar algumas boas horas ao estudo dos fundamentos e aplicações do CSS nativo.
